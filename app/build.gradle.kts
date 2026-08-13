@@ -54,5 +54,5 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
-}    debugImplementation("androidx.compose.ui:ui-tooling")
+}    
 }
