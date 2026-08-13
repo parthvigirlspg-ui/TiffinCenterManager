@@ -3,187 +3,345 @@ package com.example.tiffinmanager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.room.*
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
-@Entity(tableName = "customers")
-data class Customer(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val name: String,
-    val mobile: String = "",
-    val address: String = "",
-    val rate: Double = 0.0,
-    val lunch: Boolean = true,
-    val dinner: Boolean = false,
-    val joiningDate: String = "",
-    val active: Boolean = true
-)
-
-@Entity(tableName = "tiffin_entries")
 data class TiffinEntry(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val customerId: Int,
+    val customer: String,
     val date: String,
-    val lunchQty: Int = 0,
-    val dinnerQty: Int = 0,
-    val amount: Double = 0.0
+    val quantity: Int,
+    val amount: Double
 )
 
-@Entity(tableName = "payments")
-data class Payment(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val customerId: Int,
-    val date: String,
-    val amount: Double,
-    val mode: String
+data class ExpenseEntry(
+    val title: String,
+    val amount: Double
 )
 
-@Entity(tableName = "expenses")
-data class Expense(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val date: String,
-    val category: String,
-    val amount: Double,
-    val description: String = ""
-)
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-@Dao
-interface CustomerDao {
-    @Query("SELECT * FROM customers ORDER BY name") fun all(): kotlinx.coroutines.flow.Flow<List<Customer>>
-    @Insert fun insert(c: Customer)
-    @Update fun update(c: Customer)
-    @Delete fun delete(c: Customer)
-}
-
-@Dao
-interface TiffinDao {
-    @Query("SELECT * FROM tiffin_entries ORDER BY date DESC") fun all(): kotlinx.coroutines.flow.Flow<List<TiffinEntry>>
-    @Insert fun insert(e: TiffinEntry)
-}
-
-@Dao
-interface PaymentDao {
-    @Query("SELECT * FROM payments ORDER BY date DESC") fun all(): kotlinx.coroutines.flow.Flow<List<Payment>>
-    @Insert fun insert(p: Payment)
-}
-
-@Dao
-interface ExpenseDao {
-    @Query("SELECT * FROM expenses ORDER BY date DESC") fun all(): kotlinx.coroutines.flow.Flow<List<Expense>>
-    @Insert fun insert(e: Expense)
-}
-
-@Database(entities=[Customer::class,TiffinEntry::class,Payment::class,Expense::class], version=1, exportSchema=false)
-abstract class AppDatabase : RoomDatabase() {
-    abstract fun customerDao(): CustomerDao
-    abstract fun tiffinDao(): TiffinDao
-    abstract fun paymentDao(): PaymentDao
-    abstract fun expenseDao(): ExpenseDao
-    companion object {
-        @Volatile private var INSTANCE: AppDatabase? = null
-        fun get(context: android.content.Context): AppDatabase =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(context, AppDatabase::class.java, "tiffin.db").build().also { INSTANCE=it }
+        setContent {
+            MaterialTheme {
+                TiffinCenterApp()
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TiffinCenterApp() {
+    var selectedScreen by remember { mutableStateOf("Dashboard") }
+
+    val tiffins = remember { mutableStateListOf<TiffinEntry>() }
+    val expenses = remember { mutableStateListOf<ExpenseEntry>() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Tiffin Center Manager") }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when (selectedScreen) {
+                "Dashboard" -> DashboardScreen(
+                    tiffins = tiffins,
+                    expenses = expenses
+                )
+
+                "Tiffin" -> TiffinEntryScreen(
+                    onAdd = { entry -> tiffins.add(entry) }
+                )
+
+                "Expense" -> ExpenseScreen(
+                    onAdd = { entry -> expenses.add(entry) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedScreen = "Dashboard" }
+                ) {
+                    Text("Dashboard")
+                }
+
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedScreen = "Tiffin" }
+                ) {
+                    Text("Tiffin")
+                }
+
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedScreen = "Expense" }
+                ) {
+                    Text("Expense")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }
 
 @Composable
-fun App() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val db = remember { AppDatabase.get(context) }
-    val scope = rememberCoroutineScope()
-    var screen by remember { mutableStateOf("Dashboard") }
-    var showCustomer by remember { mutableStateOf(false) }
-    var showExpense by remember { mutableStateOf(false) }
-    var showTiffin by remember { mutableStateOf(false) }
+fun DashboardScreen(
+    tiffins: List<TiffinEntry>,
+    expenses: List<ExpenseEntry>
+) {
+    val income = tiffins.sumOf { it.amount }
+    val totalExpense = expenses.sumOf { it.amount }
+    val profit = income - totalExpense
+    val totalTiffins = tiffins.sumOf { it.quantity }
 
-    val customers by db.customerDao().all().collectAsState(initial = emptyList())
-    val expenses by db.expenseDao().all().collectAsState(initial = emptyList())
-    val tiffins by db.tiffinDao().all().collectAsState(initial = emptyList())
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                text = "Dashboard",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
-    MaterialTheme {
-        Scaffold(
-            topBar = { TopAppBar(title={ Text("🍱 Tiffin Center Manager") }) },
-            bottomBar = {
-                NavigationBar {
-                    listOf("Dashboard","Customers","Tiffin","Payments","Reports").forEach {
-                        NavigationBarItem(selected=screen==it,onClick={screen=it},
-                            icon={Text(when(it){"Dashboard"->"🏠";"Customers"->"👥";"Tiffin"->"🍱";"Payments"->"💰";else->"📊"})},
-                            label={Text(it)})
-                    }
-                }
-            },
-            floatingActionButton = {
-                if(screen=="Customers") FloatingActionButton(onClick={showCustomer=true}){Text("+")}
-                else if(screen=="Tiffin") FloatingActionButton(onClick={showTiffin=true}){Text("+")}
-                else if(screen=="Reports") FloatingActionButton(onClick={showExpense=true}){Text("+")}
-            }
-        ) { pad ->
-            Box(Modifier.padding(pad).fillMaxSize()) {
-                when(screen) {
-                    "Dashboard" -> Dashboard(customers,tiffins,expenses)
-                    "Customers" -> CustomerList(customers,onDelete={scope.launch{db.customerDao().delete(it)}})
-                    "Tiffin" -> TiffinList(tiffins,customers)
-                    "Payments" -> PaymentScreen(customers,db,scope)
-                    "Reports" -> ExpenseList(expenses)
+        item {
+            SummaryCard("Total Tiffins", totalTiffins.toString())
+        }
+
+        item {
+            SummaryCard("Total Income", "₹%.2f".format(income))
+        }
+
+        item {
+            SummaryCard("Total Expenses", "₹%.2f".format(totalExpense))
+        }
+
+        item {
+            SummaryCard("Profit", "₹%.2f".format(profit))
+        }
+
+        item {
+            Text(
+                text = "Recent Tiffin Entries",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        items(tiffins.takeLast(10).reversed()) { entry ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(entry.customer, fontWeight = FontWeight.Bold)
+                    Text("Date: ${entry.date}")
+                    Text("Tiffins: ${entry.quantity}")
+                    Text("Amount: ₹%.2f".format(entry.amount))
                 }
             }
         }
     }
-
-    if(showCustomer) CustomerDialog(
-        onDismiss={showCustomer=false},
-        onSave={c -> scope.launch{db.customerDao().insert(c);showCustomer=false}}
-    )
-    if(showTiffin) TiffinDialog(customers,{e->scope.launch{db.tiffinDao().insert(e);showTiffin=false}},{showTiffin=false})
-    if(showExpense) ExpenseDialog({e->scope.launch{db.expenseDao().insert(e);showExpense=false}},{showExpense=false})
 }
 
-@Composable fun Dashboard(c:List<Customer>, t:List<TiffinEntry>, e:List<Expense>) {
-    val income=t.sumOf{it.amount}; val expense=e.sumOf{it.amount}
-    LazyColumn(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        item{Text("Dashboard",style=MaterialTheme.typography.headlineMedium)}
-        item{StatCard("🍱 Today's Tiffins",t.filter{it.date==today()}.sumOf{it.lunchQty+it.dinnerQty}.toString())}
-        item{StatCard("💰 Total Income","₹%.2f".format(income))}
-        item{StatCard("💸 Total Expenses","₹%.2f".format(expense))}
-        item{StatCard("📈 Net Profit","₹%.2f".format(income-expense))}
-        item{StatCard("👥 Active Customers",c.count{it.active}.toString())}
+@Composable
+fun SummaryCard(title: String, value: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
-@Composable fun StatCard(title:String,value:String){Card(Modifier.fillMaxWidth()){Column(Modifier.padding(18.dp)){Text(title);Text(value,style=MaterialTheme.typography.headlineSmall)}}}
 
-@Composable fun CustomerList(list:List<Customer>,onDelete:(Customer)->Unit)=LazyColumn(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-    items(list){c->Card(Modifier.fillMaxWidth()){Row(Modifier.padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column(Modifier.weight(1f)){Text(c.name,style=MaterialTheme.typography.titleMedium);Text("${c.mobile}  •  ₹${c.rate}/tiffin");Text(if(c.active)"Active" else "Inactive")}Button(onClick={ {onDelete(c)} }){Text("Delete")}}}}
-}
-@Composable fun TiffinList(list:List<TiffinEntry>,customers:List<Customer>)=LazyColumn(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){items(list){e->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){Text(customers.find{it.id==e.customerId}?.name ?: "Customer #${e.customerId}");Text("${e.date}  •  Lunch ${e.lunchQty}  •  Dinner ${e.dinnerQty}  •  ₹${e.amount}")}}}}
-@Composable fun ExpenseList(list:List<Expense>)=LazyColumn(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){items(list){e->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){Text(e.category,style=MaterialTheme.typography.titleMedium);Text("${e.date}  •  ₹${e.amount}");if(e.description.isNotBlank())Text(e.description)}}}}
-@Composable fun PaymentScreen(customers:List<Customer>,db:AppDatabase,scope:kotlinx.coroutines.CoroutineScope){
-    var selected by remember{mutableStateOf<Customer?>(null)}; var amount by remember{mutableStateOf("")}
-    Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Text("Record Payment",style=MaterialTheme.typography.headlineSmall)
-        customers.forEach{c->Button(onClick={selected=c},Modifier.fillMaxWidth()){Text("${c.name}  •  ₹${c.rate}/tiffin")}}
-        if(selected!=null){OutlinedTextField(amount,{amount=it},label={Text("Amount")},modifier=Modifier.fillMaxWidth());Button(onClick={scope.launch{db.paymentDao().insert(Payment(customerId=selected!!.id,date=today(),amount=amount.toDoubleOrNull()?:0.0,mode="Cash"));amount="";selected=null}},Modifier.fillMaxWidth()){Text("Save Payment")}}
+@Composable
+fun TiffinEntryScreen(
+    onAdd: (TiffinEntry) -> Unit
+) {
+    var customer by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            "Daily Tiffin Entry",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        OutlinedTextField(
+            value = customer,
+            onValueChange = { customer = it },
+            label = { Text("Customer Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = date,
+            onValueChange = { date = it },
+            label = { Text("Date (DD-MM-YYYY)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = quantity,
+            onValueChange = { quantity = it.filter(Char::isDigit) },
+            label = { Text("Tiffin Quantity") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = amount,
+            onValueChange = { amount = it },
+            label = { Text("Amount (₹)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                val qty = quantity.toIntOrNull()
+                val price = amount.toDoubleOrNull()
+
+                if (
+                    customer.isNotBlank() &&
+                    date.isNotBlank() &&
+                    qty != null &&
+                    price != null
+                ) {
+                    onAdd(
+                        TiffinEntry(
+                            customer = customer.trim(),
+                            date = date.trim(),
+                            quantity = qty,
+                            amount = price
+                        )
+                    )
+
+                    customer = ""
+                    date = ""
+                    quantity = ""
+                    amount = ""
+                }
+            }
+        ) {
+            Text("Save Tiffin Entry")
+        }
     }
 }
-@Composable fun CustomerDialog(onDismiss:()->Unit,onSave:(Customer)->Unit){
-    var name by remember{mutableStateOf("")};var mobile by remember{mutableStateOf("")};var rate by remember{mutableStateOf("")}
-    AlertDialog(onDismissRequest=onDismiss,title={Text("Add Customer")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(name,{name=it},label={Text("Name")});OutlinedTextField(mobile,{mobile=it},label={Text("Mobile")});OutlinedTextField(rate,{rate=it},label={Text("Tiffin Rate")})}},confirmButton={Button(onClick={if(name.isNotBlank())onSave(Customer(name=name,mobile=mobile,rate=rate.toDoubleOrNull()?:0.0,joiningDate=today()))}){Text("Save")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
+
+@Composable
+fun ExpenseScreen(
+    onAdd: (ExpenseEntry) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            "Add Expense",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Expense Name") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        OutlinedTextField(
+            value = amount,
+            onValueChange = { amount = it },
+            label = { Text("Amount (₹)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                val value = amount.toDoubleOrNull()
+
+                if (title.isNotBlank() && value != null) {
+                    onAdd(
+                        ExpenseEntry(
+                            title = title.trim(),
+                            amount = value
+                        )
+                    )
+
+                    title = ""
+                    amount = ""
+                }
+            }
+        ) {
+            Text("Save Expense")
+        }
+    }
 }
-@Composable fun TiffinDialog(customers:List<Customer>,onSave:(TiffinEntry)->Unit,onDismiss:()->Unit){
-    var cid by remember{mutableStateOf(customers.firstOrNull()?.id?:0)};var lunch by remember{mutableStateOf("1")};var dinner by remember{mutableStateOf("0")}
-    val c=customers.find{it.id==cid}; AlertDialog(onDismissRequest=onDismiss,title={Text("Daily Tiffin Entry")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){customers.forEach{Button(onClick={cid=it.id}){Text(it.name)}};OutlinedTextField(lunch,{lunch=it},label={Text("Lunch Qty")});OutlinedTextField(dinner,{dinner=it},label={Text("Dinner Qty")})}},confirmButton={Button(onClick={onSave(TiffinEntry(customerId=cid,date=today(),lunchQty=lunch.toIntOrNull()?:0,dinnerQty=dinner.toIntOrNull()?:0,amount=((lunch.toDoubleOrNull()?:0.0)+(dinner.toDoubleOrNull()?:0.0))*(c?.rate?:0.0)))}){Text("Save")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
-}
-@Composable fun ExpenseDialog(onSave:(Expense)->Unit,onDismiss:()->Unit){
-    var cat by remember{mutableStateOf("")};var amt by remember{mutableStateOf("")};var desc by remember{mutableStateOf("")}
-    AlertDialog(onDismissRequest=onDismiss,title={Text("Add Expense")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(cat,{cat=it},label={Text("Category")});OutlinedTextField(amt,{amt=it},label={Text("Amount")});OutlinedTextField(desc,{desc=it},label={Text("Description")})}},confirmButton={Button(onClick={onSave(Expense(date=today(),category=cat,amount=amt.toDoubleOrNull()?:0.0,description=desc))}){Text("Save")}},dismissButton={TextButton(onClick=onDismiss){Text("Cancel")}})
-}
-fun today()=SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(Date())
