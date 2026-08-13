@@ -1,15 +1,19 @@
-# Tiffin Center Manager V1.0
+# 🍱 Tiffin Center Manager V1.0
 
-Kotlin + Jetpack Compose + Room based offline Android starter project.
+Build-ready Android starter project using Kotlin, Jetpack Compose and Room.
 
-Features:
+## V1.0
 - Dashboard
-- Customer add/delete
-- Daily lunch/dinner tiffin entry
-- Income from tiffin entries
-- Payment recording
-- Expense recording
-- Basic profit calculation
-- Local Room database
+- Customer management
+- Daily lunch/dinner tiffin entries
+- Payments
+- Expenses
+- Basic income/expense/profit calculation
+- Offline Room database
 
-Open this folder in Android Studio and sync Gradle, then build the debug APK.
+## GitHub Actions
+The repository contains `.github/workflows/build-apk.yml`.
+Every push to `main`, or a manual workflow run, builds a debug APK and uploads it as a GitHub Actions artifact.
+
+## Local Android Studio
+Open the repository root in Android Studio and sync Gradle.
